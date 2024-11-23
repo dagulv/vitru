@@ -2,6 +2,4 @@
     let test = $state(0);
 </script>
 
-<div use:builder>
-    
-</div>
+<div use:dnd={{sender: true, receiver: true}}></div>

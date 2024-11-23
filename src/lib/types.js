@@ -15,6 +15,7 @@
 
 /**
  * @typedef BuilderOpts
- * @property {bool} Sender
- * @property {bool} Receiver
+ * @property {bool} sender
+ * @property {bool} receiver
+ * @property {bool} builder
  */

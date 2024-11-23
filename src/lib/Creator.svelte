@@ -3,8 +3,13 @@
     const { blocks } = $props();
 </script>
 
-<ul>
+<ul use:dnd={{sender: true}}>
     {#each blocks as block}
-    <li><block.icon /> {block.name}</li>
+        <li>
+            <button>
+                <block.icon />
+                {block.name}
+            </button>
+        </li>
     {/each}
 </ul>
