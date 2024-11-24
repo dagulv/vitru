@@ -1,4 +1,6 @@
 <script>
+	import { dnd } from "./dnd.svelte.js";
+
     let test = $state(0);
 </script>
 

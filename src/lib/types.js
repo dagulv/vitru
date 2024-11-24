@@ -19,10 +19,7 @@
  * @property {bool} receiver
  */
 
-/** @type {Block} block */
-const block = {
-    icon: null,
-    sender: null,
-};
-
-const test = block;
+/**
+ * @typedef BuilderNode
+ * @
+ */
