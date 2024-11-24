@@ -17,5 +17,12 @@
  * @typedef BuilderOpts
  * @property {bool} sender
  * @property {bool} receiver
- * @property {bool} builder
  */
+
+/** @type {Block} block */
+const block = {
+    icon: null,
+    sender: null,
+};
+
+const test = block;
