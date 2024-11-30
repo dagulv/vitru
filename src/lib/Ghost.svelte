@@ -1,34 +1,43 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { spring } from 'svelte/motion';
 	import { fade } from 'svelte/transition';
 
-	/** @type {{block: import('$lib/types.js').Block, x: int, y: int}} */
+	/** @type {{block: import('$lib/types.js').Block, x: int, y: int, setElement: (element) => {}}} */
 	let { block, x, y, setElement } = $props();
 	let element;
+	let raf;
 	const coords = spring(
 		{ x, y },
 		{
-			stiffness: 0.5,
-			damping: 0.25
+			stiffness: 0.9,
+			damping: 0.9
 		}
 	);
 
-	requestAnimationFrame(animateCoords);
+	raf = requestAnimationFrame(animateCoords);
 
 	function animateCoords() {
+		console.log(x, y);
+
 		coords.set({ x, y });
-		requestAnimationFrame(animateCoords);
+		raf = requestAnimationFrame(animateCoords);
 	}
 
 	onMount(() => {
-		setElement(element);
+		if (typeof setElement === 'function') {
+			setElement(element);
+		}
+	});
+
+	onDestroy(() => {
+		cancelAnimationFrame(raf);
 	});
 </script>
 
 <div
-	class="fixed left-0 top-0 text-red-600"
-	style={`transform: translate(${x}px, ${y}px);`}
+	class="fixed left-0 top-0 cursor-move select-none text-red-600"
+	style={`transform: translate(${$coords.x}px, ${$coords.y}px);`}
 	bind:this={element}
 	transition:fade={{ duration: 150 }}
 >

@@ -8,7 +8,7 @@
 <ul use:dnd={{ sender: true }} class="h-full w-full">
 	{#each blocks as block}
 		<li>
-			<button data-builder data-block={block.name}>
+			<button data-builder data-block={block.name} class="cursor-move">
 				<block.icon class="pointer-events-none" />
 				{block.name}
 			</button>
