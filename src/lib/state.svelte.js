@@ -2,10 +2,26 @@ import Ghost from '$lib/Ghost.svelte';
 import { mount, unmount } from 'svelte';
 import { crossfade } from './transitions.js';
 
-export class State {
-	currentBlock = $state({});
+export class BuilderState {
+	nodes;
+	selection;
 
 	constructor() {}
+
+	toJSON() {}
+}
+
+export class BlockNode {
+	key = '';
+	type = '';
+
+	static getType() {}
+
+	constructor() {}
+
+	getType() {
+		return this.type;
+	}
 }
 
 export class GhostState {
