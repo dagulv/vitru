@@ -1,12 +1,14 @@
 <script>
-	import { Container } from '$lib/blocks.js';
+	import { Container, Text } from '$lib/blocks.js';
 	import Builder from '$lib/Builder.svelte';
 	import Creator from '$lib/Creator.svelte';
 
-	const blocks = [Container];
+	const blocks = [Container, Text];
 </script>
 
-<section class="h-screen w-screen">
+<section class="h-[150vh] h-screen w-screen">
 	<Builder />
-	<Creator {blocks} />
+	<section class="fixed bottom-0 right-0 top-0 w-64 p-4">
+		<Creator {blocks} />
+	</section>
 </section>

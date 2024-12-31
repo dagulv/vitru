@@ -18,8 +18,6 @@
 	raf = requestAnimationFrame(animateCoords);
 
 	function animateCoords() {
-		console.log(x, y);
-
 		coords.set({ x, y });
 		raf = requestAnimationFrame(animateCoords);
 	}

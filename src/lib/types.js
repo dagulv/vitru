@@ -1,4 +1,4 @@
-/** @type {import('svelte').Component<import('lucide-svelte').Icon>} Icon */
+/** @typedef {import('svelte').Component<import('lucide-svelte').Icon>} Icon */
 
 /**
  * @typedef Structure
@@ -10,16 +10,18 @@
  * @typedef Block
  * @property {Icon} icon
  * @property {string} name
- * @property {Structure} structure
+ * @property {string} label
+ * @property {'leaf' | 'branch'} type
+ * @property {import('svelte').Component} component
  */
 
 /**
  * @typedef BuilderOpts
- * @property {bool} sender
- * @property {bool} receiver
+ * @property {bool} creator
+ * @property {bool} builder
  */
 
-/**
- * @typedef BuilderNode
- * @
- */
+/** @typedef {'hover' | 'select' | null} NodeState */
+/** @typedef {'before' | 'after' | null} NodeStatePosition */
+
+/** @typedef {'root' | `${string}-${string}-${string}-${string}-${string}`} NodeKey */

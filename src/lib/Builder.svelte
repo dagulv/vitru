@@ -1,7 +1,17 @@
 <script>
-	import { dnd } from "./dnd.svelte.js";
+	import { onMount } from 'svelte';
+	import { dnd } from './dnd.svelte.js';
+	import { getBuilderState } from './builder.js';
 
-    let test = $state(0);
+	let test = $state(0);
+	/** @type {import('$lib/state.svelte.js').BuilderState} */
+	let builderState = $state();
+
+	onMount(() => {
+		builderState = getBuilderState();
+	});
 </script>
 
-<div use:dnd={{sender: true, receiver: true}}></div>
+<article class="h-full w-full" use:dnd={{ builder: true }}>
+	{builderState?.getRoot()?.createDOM()}
+</article>

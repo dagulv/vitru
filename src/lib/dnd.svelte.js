@@ -1,15 +1,39 @@
-import { Container } from './blocks.js';
-import { GhostState } from './state.svelte.js';
+import { Container, Text } from '$lib/blocks.js';
+import {
+	createAndPlaceNode,
+	createBuilder,
+	findBuilderNode,
+	setBuilderState
+} from '$lib/builder.js';
+import { GhostState } from '$lib/state.svelte.js';
 
 /** @type {Map<string, import('$lib/types.js').Block>} */
-const blocks = new Map([[Container.name, Container]]);
+const blocks = new Map([
+	[Container.name, Container],
+	[Text.name, Text]
+]);
 
 /** @type {import('svelte/action').Action<HTMLElement, import('$lib/types.js').BuilderOpts>} */
 export function dnd(node, opts) {
-	let sender = false;
-	let receiver = false;
+	node.dataset.key = 'root';
+
+	let creator = false;
+	let builder = false;
+
+	if (typeof opts.creator === 'boolean') {
+		creator = opts.creator;
+	}
+	if (typeof opts.builder === 'boolean') {
+		builder = opts.builder;
+	}
+
+	if (builder) {
+		setBuilderState(createBuilder(node));
+	}
 
 	const ghost = new GhostState(node);
+	/** @type {import('$lib/state.svelte.js').BaseNode} */
+	let targetNode;
 
 	/** @type {import('svelte/elements').PointerEventHandler<HTMLElement>} */
 	function onPointerDown(e) {
@@ -25,6 +49,10 @@ export function dnd(node, opts) {
 
 	/** @type {import('svelte/elements').PointerEventHandler<HTMLElement>} */
 	async function onPointerUp() {
+		if (targetNode) {
+			createAndPlaceNode(ghost.props.block, targetNode);
+		}
+
 		//Release and drop or return to start
 		document.body.removeEventListener('pointermove', onPointerMove);
 		document.body.removeEventListener('pointerdown', onPointerDown);
@@ -37,16 +65,16 @@ export function dnd(node, opts) {
 		ghost.setCoords(e.clientX, e.clientY);
 
 		//Display if element can be dropped
+		targetNode = findBuilderNode(e.target);
+
+		if (targetNode === null) {
+			return;
+		}
+
+		targetNode.state = 'hover';
 	}
 
 	$effect(() => {
-		if (typeof opts.sender === 'boolean') {
-			sender = opts.sender;
-		}
-		if (typeof opts.receiver === 'boolean') {
-			receiver = opts.receiver;
-		}
-
 		node.addEventListener('pointerdown', onPointerDown);
 		return () => {
 			document.body.removeEventListener('pointerdown', onPointerDown);
