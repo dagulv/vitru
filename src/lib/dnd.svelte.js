@@ -3,9 +3,10 @@ import {
 	createAndPlaceNode,
 	createBuilder,
 	findBuilderNode,
+	getPosition,
 	setBuilderState
-} from '$lib/builder.js';
-import { GhostState } from '$lib/state.svelte.js';
+} from '$lib/builder.svelte.js';
+import { GhostState, HoverState } from '$lib/state.svelte.js';
 
 /** @type {Map<string, import('$lib/types.js').Block>} */
 const blocks = new Map([
@@ -15,8 +16,6 @@ const blocks = new Map([
 
 /** @type {import('svelte/action').Action<HTMLElement, import('$lib/types.js').BuilderOpts>} */
 export function dnd(node, opts) {
-	node.dataset.key = 'root';
-
 	let creator = false;
 	let builder = false;
 
@@ -29,11 +28,18 @@ export function dnd(node, opts) {
 
 	if (builder) {
 		setBuilderState(createBuilder(node));
+		node.dataset.key = 'root';
 	}
 
 	const ghost = new GhostState(node);
 	/** @type {import('$lib/state.svelte.js').BaseNode} */
 	let targetNode;
+
+	/** @type {HoverState} */
+	let hoverState = null;
+
+	/** @type {HTMLElement} */
+	let cachedElement;
 
 	/** @type {import('svelte/elements').PointerEventHandler<HTMLElement>} */
 	function onPointerDown(e) {
@@ -57,21 +63,46 @@ export function dnd(node, opts) {
 		document.body.removeEventListener('pointermove', onPointerMove);
 		document.body.removeEventListener('pointerdown', onPointerDown);
 		ghost.destroy();
+		if (hoverState) {
+			hoverState.destroy();
+		}
+		hoverState = null;
+		cachedElement = null;
 	}
 
 	/** @type {import('svelte/elements').PointerEventHandler<HTMLElement>} */
-	function onPointerMove(e) {
+	async function onPointerMove(e) {
 		//Create ghost element and follow cursor
 		ghost.setCoords(e.clientX, e.clientY);
+
+		if (!creator) {
+			return;
+		}
+
+		if (e.target === cachedElement) {
+			return;
+		}
 
 		//Display if element can be dropped
 		targetNode = findBuilderNode(e.target);
 
 		if (targetNode === null) {
+			cachedElement = null;
+			if (hoverState) {
+				hoverState.destroy();
+			}
+			hoverState = null;
 			return;
 		}
+		cachedElement = e.target;
 
-		targetNode.state = 'hover';
+		const position = getPosition(e, targetNode);
+
+		if (!hoverState) {
+			hoverState = new HoverState();
+		}
+
+		await hoverState.transform(position, targetNode);
 	}
 
 	$effect(() => {

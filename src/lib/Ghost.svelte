@@ -34,11 +34,11 @@
 </script>
 
 <div
-	class="fixed left-0 top-0 cursor-move select-none text-red-600"
+	class="pointer-events-none fixed left-0 top-0 cursor-move select-none text-red-600"
 	style={`transform: translate(${$coords.x}px, ${$coords.y}px);`}
 	bind:this={element}
 	transition:fade={{ duration: 150 }}
 >
-	<block.icon class="pointer-events-none" />
+	<block.icon />
 	{block.name}
 </div>

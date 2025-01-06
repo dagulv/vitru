@@ -22,6 +22,8 @@
  */
 
 /** @typedef {'hover' | 'select' | null} NodeState */
-/** @typedef {'before' | 'after' | null} NodeStatePosition */
+/** @typedef {'before' | 'after' | 'in' | null} NodeStatePosition */
 
 /** @typedef {'root' | `${string}-${string}-${string}-${string}-${string}`} NodeKey */
+
+/** @typedef {'horizontal', 'vertical'} Alignment */

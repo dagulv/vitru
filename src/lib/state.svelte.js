@@ -1,7 +1,7 @@
 import Ghost from '$lib/Ghost.svelte';
 import { mount, unmount } from 'svelte';
 import { crossfade2 } from './transitions.js';
-import { getBuilderState, mountNode } from './builder.js';
+import { findBuilderNode, getBuilderState, mountNode } from './builder.svelte.js';
 
 /**
  * @class BaseNode
@@ -18,22 +18,23 @@ export class BaseNode {
 	/** @type {HTMLElement} */
 	element = null;
 	/** @type {BaseNode} */
-	prev;
+	prev = null;
 	/** @type {BaseNode} */
-	next;
+	next = null;
 
 	static getType() {
 		throw new Error('method must be implemented');
 	}
 
-	constructor(nodeKey) {
+	constructor(block, nodeKey = null) {
 		this.type = this.constructor.getType();
+		this.component = block?.component;
 
 		if (nodeKey) {
 			this.key = nodeKey;
 			return;
 		}
-
+		//TODO add component
 		const builder = getBuilderState();
 		this.key = crypto.randomUUID();
 		builder.nodeMap.set(this.key, this);
@@ -48,7 +49,10 @@ export class BaseNode {
 		node.prev = this.prev;
 		node.next = this;
 
-		this.prev.next = node;
+		if (this.prev) {
+			this.prev.next = node;
+		}
+
 		this.prev = node;
 
 		console.log('before', this);
@@ -61,7 +65,10 @@ export class BaseNode {
 		node.next = this.next;
 		node.prev = this;
 
-		this.next.prev = node;
+		if (this.next) {
+			this.next.prev = node;
+		}
+
 		this.next = node;
 
 		console.log('after', this);
@@ -80,6 +87,7 @@ export class BaseNode {
 
 	isAvailable() {}
 
+	/** @returns {import('svelte').Snippet<[]>} */
 	createDOM() {
 		throw Error('createDOM needs to be implemented by class');
 	}
@@ -95,21 +103,23 @@ export class BaseNode {
  */
 export class BranchNode extends BaseNode {
 	/** @type {BaseNode} */
-	first;
+	first = null;
 	/** @type {BaseNode} */
-	last;
+	last = null;
+	/** @type {import('$lib/types.js').Alignment} */
+	alignment = 'vertical';
 
 	static getType() {
 		return 'branchNode';
 	}
 
-	constructor(nodeKey) {
-		super(nodeKey);
+	constructor(block, nodeKey = null) {
+		super(block, nodeKey);
 	}
 
 	/** @param {BaseNode} */
 	insertIn(node) {
-		if (!this.first) {
+		if (this.first) {
 			return this.first.insertAfter(node);
 		}
 
@@ -121,15 +131,24 @@ export class BranchNode extends BaseNode {
 	}
 
 	createDOM() {
-		if (this.first) {
-			mountNode(this.element, this.first);
-			this.first.createDOM();
-		}
+		let child = this.first;
 
-		if (this.next) {
-			mountNode(this.element, this.next);
-			this.next.createDOM();
+		const dom = [];
+		while (child != null) {
+			dom.push(child.createDOM());
+			child = child.next;
 		}
+		return mountNode(this, dom);
+
+		// if (this.first) {
+		// 	const childRootElement = mountNode(rootElement, this.first);
+		// 	this.first.createDOM(childRootElement);
+		// }
+
+		// if (this.next) {
+		// 	const childRootElement = mountNode(rootElement, this.next);
+		// 	this.next.createDOM(childRootElement);
+		// }
 	}
 }
 
@@ -142,17 +161,12 @@ export class LeafNode extends BaseNode {
 		return 'leafNode';
 	}
 
-	constructor(nodeKey) {
-		super(nodeKey);
+	constructor(block, nodeKey = null) {
+		super(block, nodeKey);
 	}
 
 	createDOM() {
-		if (!this.next) {
-			return;
-		}
-
-		mountNode(this.element, this.next);
-		this.next.createDOM();
+		return mountNode(this);
 	}
 }
 
@@ -165,9 +179,9 @@ export class RootNode extends BranchNode {
 		return 'rootNode';
 	}
 
-	constructor(rootElement) {
-		super('root');
-		this.element = rootElement;
+	constructor(element) {
+		super(null, 'root');
+		this.element = element;
 	}
 
 	/** @param {BaseNode} */
@@ -180,12 +194,24 @@ export class RootNode extends BranchNode {
 		throw new Error('cant insert after root');
 	}
 	createDOM() {
-		console.log(this.first);
+		let child = this.first;
+		console.log('root', this, child);
 
-		if (this.first) {
-			mountNode(this.element, this.first);
-			this.first.createDOM();
+		let dom = [];
+		while (child != null) {
+			dom = dom.push(child.createDOM());
+			child = child.next;
 		}
+
+		if (!dom.length) {
+			return;
+		}
+		//TODO always return array of snippets
+		return mountNode(dom);
+		// if (this.first) {
+		// 	const dom = this.first.createDOM();
+		// 	return mountNode(this.first, dom);
+		// }
 	}
 	toJSON() {}
 }
@@ -200,6 +226,135 @@ export class BuilderState {
 
 	getRoot() {
 		return this.nodeMap.get('root');
+	}
+}
+
+export class HoverState {
+	/** @type {HTMLElement} */
+	#element = null;
+	#x = 0;
+	#y = 0;
+	#width = 0;
+	#height = 0;
+	#active = false;
+
+	constructor() {}
+
+	destroy() {
+		if (!this.#element) {
+			return;
+		}
+
+		this.#element.remove();
+	}
+
+	#crossfade() {
+		const duration = /** @param {number} d */ (d) => Math.sqrt(d) * 30;
+		const from = this.#element.getBoundingClientRect();
+
+		const dx = this.#x - from.x;
+		const dy = this.#y - from.y;
+		const dw = from.width / this.#width;
+		const dh = from.height / this.#height;
+		const d = Math.sqrt(dx * dx + dy * dy);
+		const style = getComputedStyle(this.#element);
+		const transform = style.transform === 'none' ? '' : style.transform;
+		const opacity = +style.opacity;
+
+		const animation = this.#element.animate(
+			[
+				{
+					transform: `${style.transform} translate(${from.left}px,${from.top}px) scale(${1})`,
+					opacity: 1
+				},
+				{
+					transform: `${transform} translate(${this.#x}px,${this.#y}px) scale(${dw}, ${dh})`,
+					opacity
+				}
+			],
+			{
+				duration: typeof duration === 'function' ? duration(d) : duration,
+				easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+				opacity: opacity,
+				transformOrigin: 'top left'
+			}
+		);
+
+		return animation.finished;
+	}
+
+	/**
+	 * @param {import('./types.js').NodeStatePosition} position
+	 * @param {import('./state.svelte.js').BaseNode} targetNode
+	 */
+	async transform(position, targetNode) {
+		const rect = targetNode.element.getBoundingClientRect();
+
+		this.#x = rect.x;
+		this.#y = rect.y;
+
+		if (position === 'in') {
+			this.#width = rect.width;
+			this.#height = rect.height;
+		} else {
+			const parentNode = findBuilderNode(targetNode.element);
+
+			switch (parentNode.alignment) {
+				case 'horizontal':
+					this.#width = 1;
+					this.#height = rect.height;
+					if (position === 'after') {
+						this.#x = rect.x + rect.width;
+					}
+					break;
+				case 'vertical':
+					this.#width = rect.width;
+					this.#height = 1;
+					if (position === 'after') {
+						this.#y = rect.y + rect.height;
+					}
+					break;
+			}
+		}
+
+		if (this.#element) {
+			await this.#crossfade();
+		} else {
+			this.#element = document.createElement('div');
+			this.#element.style.position = 'fixed';
+			this.#element.style.left = '0px';
+			this.#element.style.top = '0px';
+			this.#element.style.border = '2px solid red';
+			this.#element.style.background = 'transparent';
+			this.#element.style.pointerEvents = 'none';
+			this.#element.style.transform = `translate(${this.#x}px,${this.#y}px)`;
+
+			document.body.appendChild(this.#element);
+
+			// const animation = this.#element.animate(
+			// 	[
+			// 		{
+			// 			transform: `translate(${this.#x}px,${this.#y}px)`,
+			// 			opacity: 0
+			// 		},
+			// 		{
+			// 			transform: `translate(${this.#x}px,${this.#y}px)`,
+			// 			opacity: 1
+			// 		}
+			// 	],
+			// 	{
+			// 		duration: 150,
+			// 		easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+			// 		opacity: 1,
+			// 		transformOrigin: 'top left'
+			// 	}
+			// );
+
+			// await animation.finished;
+		}
+
+		this.#element.style.width = this.#width + 'px';
+		this.#element.style.height = this.#height + 'px';
 	}
 }
 

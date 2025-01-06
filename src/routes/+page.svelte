@@ -7,7 +7,7 @@
 </script>
 
 <section class="h-[150vh] h-screen w-screen">
-	<Builder />
+	<Builder class="mr-64 h-full bg-slate-500" />
 	<section class="fixed bottom-0 right-0 top-0 w-64 p-4">
 		<Creator {blocks} />
 	</section>
